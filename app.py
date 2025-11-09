@@ -2,16 +2,18 @@ import streamlit as st
 import time
 
 # -----------------------------------------------
-# PHẦN LOGIC API (Tương đương Bước 2 - Sẽ gọi tới SPG lõi thực tế)
+# PHẦN LOGIC API (ĐÃ CẬP NHẬT)
 # -----------------------------------------------
 def generate_response_spg(video_url):
     """
     Hàm này mô phỏng việc gọi đến SPG lõi để phân tích video từ URL.
-    Trong ứng dụng thực tế, phần này cần được kết nối với thư viện
-    xử lý YouTube và mô hình ngôn ngữ/API phân tích.
+    Đã cập nhật kiểm tra URL để chấp nhận cả đường dẫn youtube.com và youtu.be.
     """
-    if not video_url or not "youtube.com" in video_url:
-        return "Lỗi: Vui lòng nhập một đường dẫn YouTube (URL) hợp lệ."
+    # 🌟 KIỂM TRA ĐÃ CẬP NHẬT: Chấp nhận cả 'youtube.com' VÀ 'youtu.be'
+    is_valid_url = "youtube.com" in video_url or "youtu.be" in video_url
+    
+    if not video_url or not is_valid_url:
+        return "Lỗi: Vui lòng nhập một đường dẫn YouTube (URL) hợp lệ. Đảm bảo URL chứa 'youtube.com' hoặc 'youtu.be'."
 
     # Mô phỏng quá trình xử lý mất thời gian
     with st.spinner('Đang phân tích video và xây dựng báo cáo...'):
@@ -42,7 +44,7 @@ Người hướng dẫn sử dụng giọng văn **Chuyên nghiệp, có tính h
     return result
 
 # -----------------------------------------------
-# CẤU TRÚC GIAO DIỆN WEB APP (Streamlit UI)
+# CẤU TRÚC GIAO DIỆN WEB APP (Streamlit UI) - Giữ nguyên
 # -----------------------------------------------
 st.set_page_config(page_title="SPG-WebApp: Phân Tích Video Học Thuật", layout="centered")
 
@@ -65,4 +67,5 @@ if st.button("🚀 Tạo Báo Cáo Phân Tích", type="primary"):
         st.subheader("Báo Cáo Phân Tích Đã Hoàn Thành")
         st.markdown(report)
     else:
-        st.error("Vui lòng nhập Mã URL Video để tiếp tục.")
+        # Lỗi sẽ được xử lý trong hàm generate_response_spg
+        pass
