@@ -1,67 +1,36 @@
-import streamlit as st
+# --- LOGIC MỚI: Tích hợp API thực tế ---
 
-# Hàm API Logic Tự Động bao bọc Quy Trình SPG của bạn
-def core_spg_analyzer(video_url):
-    # Giả định quá trình phân tích diễn ra
-    if "youtube.com" not in video_url and "youtu.be" not in video_url:
-        return "Lỗi: URL không hợp lệ. Vui lòng nhập đường dẫn YouTube."
-    
-    st.write("---")
-    st.info(f"Đang tiến hành phân tích video tại URL: **{video_url}**...")
-    
-    # Kết quả giả định theo OUTPUT_SCHEMA (Báo Cáo Phân Tích)
-    bao_cao = f"""
-    ## 📄 Báo Cáo Phân Tích Nội Dung Video Học Thuật
-    
-    ### 1. Tóm tắt nội dung video
-    Video này hướng dẫn về các nguyên tắc cơ bản của Machine Learning, tập trung vào mô hình Hồi quy Tuyến tính (Linear Regression).
-    
-    ### 2. Phân tích chi tiết nội dung học
-    Nội dung được chia thành 3 phần chính: Giới thiệu về Machine Learning, Đạo hàm và Gradient Descent, và Ứng dụng thực tế.
-    
-    ### 3. Đánh giá Giọng văn
-    Giọng văn của người hướng dẫn (chuyên gia phân tích đã ghi nhớ) là **chuyên nghiệp, rõ ràng** và có tốc độ vừa phải, rất phù hợp cho nội dung học thuật.
-    
-    ### 4. Danh sách các nội dung học kèm Mốc thời gian (Timestamp)
-    | Nội dung học | Mốc thời gian |
-    | :--- | :--- |
-    | Giới thiệu chung về ML | **00:00 - 01:30** |
-    | Khái niệm Hồi quy Tuyến tính | **01:31 - 04:55** |
-    | Giải thích Hàm Chi phí (Cost Function) | **04:56 - 08:10** |
-    | Thuật toán Gradient Descent | **08:11 - 12:40** |
-    | Ví dụ áp dụng Python | **12:41 - Kết thúc** |
-    
-    """
-    return bao_cao
+import re
+from youtube_transcript_api import YouTubeTranscriptApi
 
-# PHẦN XÂY DỰNG GIAO DIỆN STREAMLIT
-st.set_page_config(page_title="SPG - Phân Tích Video Học Thuật", layout="wide")
-
-st.title("📹 Ứng Dụng Phân Tích Nội Dung Video Học Thuật (SPG)")
-
-with st.container():
-    st.header("1. Nhập liệu")
-    video_url = st.text_input(
-        "Nhập mã URL của video YouTube cần phân tích:",
-        placeholder="Ví dụ: https://www.youtube.com/watch?v=xxxxxxxxxxx"
-    )
+def generate_response(input_data):
+    video_url = input_data.get('Video_URL')
     
-    if st.button("Tạo Báo Cáo Phân Tích", type="primary"):
-        if video_url:
-            with st.status("Đang thực hiện quy trình phân tích...", expanded=True) as status:
-                # Gọi hàm xử lý và nhận kết quả
-                result = core_spg_analyzer(video_url)
-                
-                status.update(label="Phân tích hoàn tất!", state="complete", expanded=False)
-            
-            st.success("🎉 Báo cáo đã sẵn sàng!")
-            st.session_state['report_result'] = result
-        else:
-            st.warning("⚠️ Vui lòng nhập URL của video trước khi tạo báo cáo.")
+    # 1. Trích xuất ID video từ URL
+    # Ví dụ: https://www.youtube.com/watch?v=VIDEO_ID -> VIDEO_ID
+    video_id_match = re.search(r'(?<=v=)[\w-]+', video_url)
+    if not video_id_match:
+        return "Lỗi: URL không hợp lệ hoặc không trích xuất được Video ID."
+        
+    video_id = video_id_match.group(0)
 
+    try:
+        # 2. Lấy phụ đề (transcript) của video
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'vi'])
+        
+        # Nối tất cả nội dung phụ đề thành một chuỗi lớn để phân tích
+        full_transcript = " ".join([item['text'] for item in transcript_list])
+        
+        # 3. GỌI SPG LÕI (Sử dụng LLM để phân tích transcript)
+        # Tại đây, LLM sẽ phân tích 'full_transcript' theo yêu cầu
+        # của Báo Cáo (Tóm tắt, Phân tích chi tiết, Đánh giá giọng văn, Timestamp)
+        
+        # *Ví dụ mô phỏng kết quả phân tích sau khi đã có transcript thật:*
+        final_report = spg_analyze_transcript(full_transcript)
+        return final_report
+        
+    except Exception as e:
+        return f"Lỗi trong quá trình lấy phụ đề hoặc phân tích: {e}. Có thể video không có phụ đề hoặc không hỗ trợ ngôn ngữ."
 
-st.header("2. Kết quả")
-if 'report_result' in st.session_state:
-    st.markdown(st.session_state['report_result'])
-else:
-    st.info("Kết quả phân tích sẽ hiển thị ở đây sau khi bạn nhấn nút.")
+# *Hàm spg_analyze_transcript sẽ là nơi chứa logic của SPG bạn.*
+# *Nó cần một LLM để xử lý việc chia nhỏ nội dung và tạo timestamp.*
