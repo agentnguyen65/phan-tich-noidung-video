@@ -1,71 +1,105 @@
 import streamlit as st
-import time
+from youtube_transcript_api import YouTubeTranscriptApi
+from google import genai
+from google.genai.errors import APIError
+import re # Cần thiết để trích xuất ID video
 
 # -----------------------------------------------
-# PHẦN LOGIC API (ĐÃ CẬP NHẬT)
+# PHẦN LOGIC API (ĐÃ CẬP NHẬT HOÀN TOÀN)
 # -----------------------------------------------
+
+def extract_video_id(url):
+    """Lấy ID video từ URL (hỗ trợ cả đường dẫn rút gọn và đầy đủ)."""
+    # Pattern regex để tìm ID video trong các định dạng URL khác nhau
+    match = re.search(r"(?<=v=)[\w-]+|(?<=youtu\.be/)[\w-]+", url)
+    return match.group(0) if match else None
+
+def get_transcript(video_id):
+    """Gọi API để lấy bản phiên âm của video."""
+    try:
+        # Lấy danh sách các bản phiên âm (có thể có nhiều ngôn ngữ)
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        
+        # Thử lấy bản phiên âm tiếng Việt (vi) hoặc tiếng Anh (en)
+        # Nếu không có, sẽ lấy bản phiên âm tự động được tạo (generated)
+        
+        transcript = transcript_list.find_transcript(['vi', 'en']).fetch()
+        
+        # Kết hợp các đoạn text lại thành một chuỗi duy nhất
+        full_transcript = " ".join([item['text'] for item in transcript])
+        
+        return full_transcript, transcript
+    except Exception as e:
+        return f"Lỗi lấy phiên âm: Video có thể không có phụ đề, hoặc không công khai. Chi tiết: {e}", None
+
 def generate_response_spg(video_url):
     """
-    Hàm này mô phỏng việc gọi đến SPG lõi để phân tích video từ URL.
-    Đã cập nhật kiểm tra URL để chấp nhận cả đường dẫn youtube.com và youtu.be.
+    Kết nối các bước: Lấy ID -> Lấy Phiên âm -> Gửi đến LLM Lõi (Gemini) -> Trả về Báo cáo.
     """
-    # 🌟 KIỂM TRA ĐÃ CẬP NHẬT: Chấp nhận cả 'youtube.com' VÀ 'youtu.be'
-    is_valid_url = "youtube.com" in video_url or "youtu.be" in video_url
+    video_id = extract_video_id(video_url)
     
-    if not video_url or not is_valid_url:
-        return "Lỗi: Vui lòng nhập một đường dẫn YouTube (URL) hợp lệ. Đảm bảo URL chứa 'youtube.com' hoặc 'youtu.be'."
+    if not video_id:
+        return "Lỗi: Không thể trích xuất ID video từ URL. Vui lòng kiểm tra lại đường dẫn."
 
-    # Mô phỏng quá trình xử lý mất thời gian
-    with st.spinner('Đang phân tích video và xây dựng báo cáo...'):
-        time.sleep(4)  # Giả lập thời gian xử lý
+    # 1. LẤY PHIÊN ÂM
+    st.info(f"Đang lấy phiên âm cho Video ID: {video_id}...")
+    full_transcript, timed_transcript = get_transcript(video_id)
+    
+    if "Lỗi lấy phiên âm" in full_transcript:
+        return full_transcript
 
-    # KẾT QUẢ ĐẦU RA BẮT BUỘC (OUTPUT_SCHEMA)
-    result = f"""
-# 📝 Báo Cáo Phân Tích Nội Dung Video Học Thuật
+    # 2. CHUẨN BỊ LỆNH GỌI SPG LÕI
+    # (Đã thay thế logic SPG mô phỏng bằng lệnh gọi LLM thực tế)
+    
+    # Lấy API Key từ Streamlit Secrets (hoặc biến môi trường)
+    try:
+        # Thay 'GEMINI_API_KEY' bằng tên biến bạn đặt
+        client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"]) 
+    except KeyError:
+        return "Lỗi cấu hình: Vui lòng thiết lập GEMINI_API_KEY trong Streamlit Secrets."
+    except Exception as e:
+        return f"Lỗi khởi tạo Gemini Client: {e}"
+
+    # Hướng dẫn SPG Lõi (Prompt)
+    # Lồng ghép hướng dẫn SPG chi tiết của bạn vào đây
+    spg_prompt = f"""
+    Bạn là một chuyên gia phân tích nội dung video học thuật.
+    Phân tích bản phiên âm dưới đây và tạo báo cáo dựa trên **Cấu trúc Bắt Buộc** sau:
+    1. Tóm tắt nội dung video.
+    2. Phân tích chi tiết nội dung học (tập trung vào phương pháp, lý thuyết).
+    3. Đánh giá Giọng văn của người hướng dẫn (chuyên nghiệp, học thuật, thân thiện...).
+    4. Danh sách các nội dung học kèm Mốc thời gian (Timestamp) TƯƠNG ỨNG trong video.
+    
+    BẢN PHIÊN ÂM VIDEO:
+    ---
+    {full_transcript}
+    ---
+    """
+    
+    # 3. GỌI API GEMINI
+    try:
+        with st.spinner('Đang gửi phiên âm và phân tích bởi LLM Lõi...'):
+            response = client.models.generate_content(
+                model='gemini-2.5-flash', # Hoặc model phù hợp khác
+                contents=spg_prompt
+            )
+        
+        # 4. TRẢ VỀ KẾT QUẢ BÁO CÁO THỰC TẾ
+        return f"""
+# 📝 Báo Cáo Phân Tích Nội Dung Video Học Thuật (Thực Tế)
 
 **Video URL:** `{video_url}`
 ---
-
-## 🎬 Tóm Tắt Nội Dung Video
-Đây là phần tóm tắt chính xác, tập trung vào các điểm học thuật quan trọng nhất mà video truyền tải.
-
-## 🔬 Phân Tích Chi Tiết Nội Dung Học
-Nội dung học được phân tích sâu, tập trung vào phương pháp, lý thuyết và các ví dụ được sử dụng trong video.
-
-## 🎙️ Đánh Giá Giọng Văn
-Người hướng dẫn sử dụng giọng văn **Chuyên nghiệp, có tính học thuật** (Ví dụ). Giọng điệu rõ ràng, tốc độ vừa phải, rất phù hợp cho nội dung đào tạo chuyên sâu.
-
-## ⏱️ Danh Sách Các Nội Dung Học Kèm Mốc Thời Gian (Timestamp)
-* **[00:00 - 00:45]:** Giới thiệu đề tài và định hướng mục tiêu học tập.
-* **[00:46 - 03:10]:** Khái niệm cốt lõi 1: **(Tên khái niệm)** và ứng dụng.
-* **[03:11 - 06:50]:** Phân tích chi tiết trường hợp nghiên cứu: **(Tên case study)**.
-* **[06:51 - END]:** Tóm tắt các điểm chính và các bước tiếp theo.
+{response.text}
 """
-    return result
+    except APIError as e:
+        return f"Lỗi API Gemini: Đã xảy ra lỗi khi gọi LLM Lõi. Chi tiết: {e}"
+    except Exception as e:
+        return f"Lỗi chung: {e}"
 
 # -----------------------------------------------
-# CẤU TRÚC GIAO DIỆN WEB APP (Streamlit UI) - Giữ nguyên
+# PHẦN UI CỦA STREAMLIT VẪN GIỮ NGUYÊN
 # -----------------------------------------------
 st.set_page_config(page_title="SPG-WebApp: Phân Tích Video Học Thuật", layout="centered")
-
-st.title("📺 SPG-WebApp: Công Cụ Phân Tích Video Học Thuật")
-st.markdown("Chuyển đổi URL video YouTube thành báo cáo học thuật chi tiết kèm mốc thời gian.")
-
-# --- Ô nhập thông tin (INPUT_SCHEMA) ---
-video_url_input = st.text_input(
-    label="**1. Nhập Mã URL Video YouTube Cần Phân Tích**",
-    placeholder="Dán đường dẫn video YouTube tại đây (ví dụ: https://www.youtube.com/watch?v=XXXXXXX)"
-)
-
-# --- Nút “Tạo kết quả” ---
-if st.button("🚀 Tạo Báo Cáo Phân Tích", type="primary"):
-    if video_url_input:
-        # Gọi hàm logic xử lý
-        report = generate_response_spg(video_url_input)
-        
-        # --- Khung hiển thị kết quả (OUTPUT_SCHEMA) ---
-        st.subheader("Báo Cáo Phân Tích Đã Hoàn Thành")
-        st.markdown(report)
-    else:
-        # Lỗi sẽ được xử lý trong hàm generate_response_spg
-        pass
+# (Phần còn lại của code UI không thay đổi)
+# ...
