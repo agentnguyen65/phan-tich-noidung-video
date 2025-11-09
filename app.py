@@ -103,3 +103,5 @@ def generate_response_spg(video_url):
 st.set_page_config(page_title="SPG-WebApp: Phân Tích Video Học Thuật", layout="centered")
 # (Phần còn lại của code UI không thay đổi)
 # ...
+    
+      
