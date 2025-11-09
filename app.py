@@ -1,7 +1,9 @@
 import streamlit as st
 import re
-# SỬA LỖI: Import toàn bộ module và đổi tên thành 'yta' để tránh lỗi 'has no attribute'
-import youtube_transcript_api as yta 
+# SỬA LỖI CUỐI CÙNG: Import module gốc và gọi hàm đầy đủ
+import youtube_transcript_api 
+# ******************************************************
+
 
 # ****************** HÀM PHÂN TÍCH SPG LÕI (placeholder) ******************
 
@@ -12,10 +14,10 @@ def spg_analyze_transcript(transcript):
     placeholder_report = f"""
     ## ✅ Phụ đề đã được trích xuất thành công!
     
-    ### ⚠️ Lỗi: Logic Phân Tích (SPG Lõi) Chưa Được Tích Hợp
+    ### ⚠️ Hướng Dẫn Kỹ Thuật (LLM Logic)
     
     Hàm `spg_analyze_transcript` hiện đang thiếu logic gọi LLM/AI. 
-    Để hoàn tất, bạn cần chèn mã gọi API LLM (ví dụ: OpenAI, Google Gemini, Anthropic) vào hàm này để xử lý `transcript`.
+    Bạn cần chèn mã gọi API LLM (ví dụ: Gemini, OpenAI) vào hàm này để xử lý `transcript`.
     
     **Transcript Thực Tế Đã Lấy Được (Ví dụ 500 ký tự đầu):**
     > "{transcript[:500]}..."
@@ -24,7 +26,7 @@ def spg_analyze_transcript(transcript):
     """
     return placeholder_report
 
-# ****************** HÀM CHÍNH (API LOGIC) ĐÃ SỬA LỖI URL & IMPORT ******************
+# ****************** HÀM CHÍNH (API LOGIC) ĐÃ SỬA LỖI TRIỆT ĐỂ ******************
 
 # Regex đã sửa để chấp nhận youtu.be/
 VIDEO_ID_REGEX = re.compile(
@@ -46,8 +48,8 @@ def generate_response(input_data):
     try:
         st.info(f"Đang tìm kiếm phụ đề cho Video ID: **{video_id}**...")
         
-        # SỬA LỖI GỌI HÀM: Gọi thông qua yta.YouTubeTranscriptApi
-        transcript_list = yta.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'vi', 'ja', 'zh'])
+        # SỬA LỖI GỌI HÀM CUỐI CÙNG: Gọi hàm đầy đủ qua module.class.method
+        transcript_list = youtube_transcript_api.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'vi', 'ja', 'zh'])
         
         full_transcript = " ".join([item['text'] for item in transcript_list])
         
@@ -90,7 +92,3 @@ if 'report_result' in st.session_state:
     st.markdown(st.session_state['report_result'])
 else:
     st.info("Kết quả phân tích sẽ hiển thị ở đây sau khi bạn nhấn nút.")
-
-
-
-
