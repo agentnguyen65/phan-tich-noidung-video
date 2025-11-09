@@ -1,48 +1,36 @@
 import streamlit as st
 import re
-from youtube_transcript_api import YouTubeTranscriptApi
-# Lưu ý: Bạn cần thêm thư viện/API LLM của mình tại đây (ví dụ: openai, google-genai, etc.)
+# SỬA LỖI: Import toàn bộ module và đổi tên thành 'yta' để tránh lỗi 'has no attribute'
+import youtube_transcript_api as yta 
 
-# ****************** HÀM PHÂN TÍCH SPG LÕI ******************
+# ****************** HÀM PHÂN TÍCH SPG LÕI (placeholder) ******************
 
 def spg_analyze_transcript(transcript):
     """
     Hàm mô phỏng logic SPG lõi: Phân tích phụ đề (transcript) để tạo báo cáo.
-    
-    >>> CHỈNH SỬA TẠI ĐÂY: <<<
-    Bạn cần chèn logic gọi mô hình AI/LLM của mình (ví dụ: GPT-4, Gemini)
-    để phân tích 'transcript' và tạo ra Báo Cáo Phân Tích theo yêu cầu:
-    1. Tóm tắt nội dung video
-    2. Phân tích chi tiết nội dung học
-    3. Đánh giá Giọng văn
-    4. Danh sách các nội dung học kèm Mốc thời gian (Timestamp)
-    
-    Đầu vào: 'transcript' (chuỗi nội dung phụ đề thực tế).
-    Đầu ra mong muốn: Chuỗi định dạng Markdown chứa Báo Cáo Phân Tích.
     """
-    
-    # 🛑 PHẦN CODE MÔ PHỎNG GIẢ ĐỊNH ĐÃ BỊ LOẠI BỎ THEO YÊU CẦU
-    
-    # Trả về một thông báo lỗi/hướng dẫn nếu logic LLM chưa được chèn vào
     placeholder_report = f"""
-    ## ⚠️ Lỗi: Logic Phân Tích (SPG Lõi) Chưa Được Tích Hợp
+    ## ✅ Phụ đề đã được trích xuất thành công!
     
-    ### Hướng Dẫn Kỹ Thuật
+    ### ⚠️ Lỗi: Logic Phân Tích (SPG Lõi) Chưa Được Tích Hợp
     
     Hàm `spg_analyze_transcript` hiện đang thiếu logic gọi LLM/AI. 
-    Để hoàn tất, bạn cần chèn mã gọi API LLM (ví dụ: OpenAI, Google Gemini, Anthropic) vào hàm này để xử lý `transcript` ({len(transcript.split())} từ đã được trích xuất).
+    Để hoàn tất, bạn cần chèn mã gọi API LLM (ví dụ: OpenAI, Google Gemini, Anthropic) vào hàm này để xử lý `transcript`.
     
-    **Transcript Thực Tế Đã Lấy Được (Ví dụ 100 từ đầu):**
+    **Transcript Thực Tế Đã Lấy Được (Ví dụ 500 ký tự đầu):**
     > "{transcript[:500]}..."
+    
+    Tổng số từ đã trích xuất: **{len(transcript.split())}**
     """
     return placeholder_report
 
-# ****************** HÀM CHÍNH (API LOGIC) ĐÃ SỬA LỖI URL ******************
+# ****************** HÀM CHÍNH (API LOGIC) ĐÃ SỬA LỖI URL & IMPORT ******************
 
+# Regex đã sửa để chấp nhận youtu.be/
 VIDEO_ID_REGEX = re.compile(
     r'(?:https?://)?(?:www\.)?'
     r'(?:youtu\.be/|youtube\.com/(?:watch\?v=|embed/|v/))'
-    r'([\w-]{11})' # Nhóm 1: Bắt chính xác 11 ký tự ID
+    r'([\w-]{11})' 
 )
 
 def generate_response(input_data):
@@ -57,17 +45,20 @@ def generate_response(input_data):
 
     try:
         st.info(f"Đang tìm kiếm phụ đề cho Video ID: **{video_id}**...")
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'vi', 'ja', 'zh'])
+        
+        # SỬA LỖI GỌI HÀM: Gọi thông qua yta.YouTubeTranscriptApi
+        transcript_list = yta.YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'vi', 'ja', 'zh'])
         
         full_transcript = " ".join([item['text'] for item in transcript_list])
         
         if not full_transcript:
             return "Lỗi: Không tìm thấy phụ đề hợp lệ cho video này. Video có thể không có phụ đề hoặc không hỗ trợ ngôn ngữ."
         
-        # 3. GỌI SPG LÕI (Hàm này sẽ trả về hướng dẫn vì chưa có LLM)
+        # 3. GỌI SPG LÕI
         return spg_analyze_transcript(full_transcript)
         
     except Exception as e:
+        # Nếu lỗi là do thiếu phụ đề, thông báo sẽ rõ ràng hơn.
         return f"Lỗi: Không thể lấy phụ đề hoặc phân tích nội dung. Nguyên nhân: {e}."
 
 
@@ -99,6 +90,7 @@ if 'report_result' in st.session_state:
     st.markdown(st.session_state['report_result'])
 else:
     st.info("Kết quả phân tích sẽ hiển thị ở đây sau khi bạn nhấn nút.")
+
 
 
 
